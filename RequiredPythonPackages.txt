@@ -1,0 +1,2 @@
+pyserial:    pip3 install pyserial (read serial data)
+vtk:	     pip3 install vtk (3D rendering)
