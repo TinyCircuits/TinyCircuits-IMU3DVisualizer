@@ -1,4 +1,4 @@
-// These libraries are for the BLE connection
+// Libraries for sensor and Wi-Fi communication
 #include <SPI.h>
 #include "lib_aci.h"        // 9-axis LSM9DS1
 #include "aci_setup.h"      // 9-axis LSM9DS1
