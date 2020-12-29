@@ -5,13 +5,8 @@
 
 #Import python packages for c types and
 # os functions
-import ctypes
 import os
 import sys
-import glob
-import math
-import struct
-
 sys.path.append('..')
 
 # import 3D rendering module
@@ -31,10 +26,9 @@ WIFI = 2
 
 COMMUNICATION = USB		# options: USB, WIFI
 
-
 # Connection object for USB, if USB is used
 serial_connection = 0
-vtkRenderWindow = 0
+vtk_render_window = 0
 last_quat = 0
 
 # WiFi socket object for communication to client Arduino
@@ -43,8 +37,12 @@ listen_port = 8090;
 client = 0;
 client_addr = 0;
 
+# Global variables for vtk in this script
+vtk_render_window = 0
+vtk_actors = 0
 
-def GetOrientationData():
+
+def get_orientation_data():
 	if COMMUNICATION == USB:
 		return serial_connection.readline().decode().split()
 	elif COMMUNICATION == WIFI:
@@ -52,21 +50,24 @@ def GetOrientationData():
 		return client.recv(26).decode().split()
 
 
-def information_callback(self, obj):
+def zero_orientation(self, obj):
+	print("Zeroed board orientation!")
 
-	rotate_data = GetOrientationData()
+
+def information_callback(self, obj):
+	rotate_data = get_orientation_data()
 	
 	if len(rotate_data) == 3:
-		vtkActors.InitTraversal()
-		vtkNextActor = vtkActors.GetNextActor()
-		while vtkNextActor != None:
-			vtkNextActor.SetOrientation(-90, 90,0)
-			vtkNextActor.RotateX(float(rotate_data[1]))
-			vtkNextActor.RotateY(float(rotate_data[2]))
-			vtkNextActor.SetScale(0.6, 0.6, 0.6)
-			vtkNextActor.GetProperty().LightingOff()
-			vtkNextActor = vtkActors.GetNextActor()
-		vtkRenderWindow.Render()
+		vtk_actors.InitTraversal()
+		vtc_next_actor = vtk_actors.GetNextActor()
+		while vtc_next_actor != None:
+			vtc_next_actor.SetOrientation(-90, 90, 0)
+			vtc_next_actor.RotateX(float(rotate_data[1]))
+			vtc_next_actor.RotateY(float(rotate_data[2]))
+			vtc_next_actor.SetScale(0.6, 0.6, 0.6)
+			vtc_next_actor.GetProperty().LightingOff()
+			vtc_next_actor = vtk_actors.GetNextActor()
+		vtk_render_window.Render()
 
 	# ensure four elements for four quaterion components
 	elif len(rotate_data) == 5:
@@ -97,46 +98,53 @@ def information_callback(self, obj):
 		temp_matrix.SetElement(1, 3, 0)
 		temp_matrix.SetElement(2, 3, 0)
 
-		vtkActors.InitTraversal()
-		vtkNextActor = vtkActors.GetNextActor()
-		while vtkNextActor != None:
-			vtkNextActor.SetUserMatrix(temp_matrix)
-			vtkNextActor.SetScale(0.6, 0.6, 0.6)
-			vtkNextActor.GetProperty().LightingOff()
-			vtkNextActor = vtkActors.GetNextActor()
-		vtkRenderWindow.Render()
+		vtk_actors.InitTraversal()
+		vtc_next_actor = vtk_actors.GetNextActor()
+		while vtc_next_actor != None:
+			vtc_next_actor.SetUserMatrix(temp_matrix)
+			vtc_next_actor.SetScale(0.6, 0.6, 0.6)
+			vtc_next_actor.GetProperty().LightingOff()
+			vtc_next_actor = vtk_actors.GetNextActor()
+		vtk_render_window.Render()
 
 
-def ConnectUSB():
+def connect_usb():
 	print("\n*Searching for plugged in Arduino USB ports...")
 
 	arduino_ports = list(serial.tools.list_ports.comports())
+	port_number = 0
+
+	print("*Found COM ports:")
+	port_index = 0
+	for port in arduino_ports:
+		print(port_index, "\t", port)
+		port_index = port_index + 1
 
 	if not arduino_ports:
 		print("*No Arduino boards were found to be plugged in - stopping debugger")
 		exit()
 	elif len(arduino_ports) > 1:
-		print("More than one Arduino board is plugged in - using the first board")
+		print("*More than one COM port connection detected - enter number correlating to port to use (e.g. '0', '1', etc...)")
+		try:
+			port_number = int(input("*Enter number from above: "))
+		except ValueError:
+			print("*ERROR: Character entered was not a number - stopping debugger")
+			exit()
 
-	print("*Found USB Arduino boards:")
-	for port in arduino_ports:
-		print("\t", port)
-		
-	print("*Using board port \"", arduino_ports[0], "\" for IMU data stream")
-	print("*Attempting to open port", arduino_ports[0].device)
+	print("*Using board port \"", arduino_ports[port_number], "\" for IMU data stream")
+	print("*Attempting to open port", arduino_ports[port_number].device)
 
 	try:
 		global serial_connection
-		serial_connection = serial.Serial(arduino_ports[0].device, 115200)
+		serial_connection = serial.Serial(arduino_ports[port_number].device, 115200)
 		print("*Successfully opened device port\n")
-		connection_established = 1
 		return 1
 	except:
 		print("\n*Could not open port: either the device was unplugged, another process is using the port, or permission denied - stopping debugger\n")
 		exit()
 
 
-def ConnentWiFi():
+def connect_wifi():
 	print("\n*Connecting using WiFi...\n")
 	wifi = socket.socket()
 	wifi.bind(('0.0.0.0', listen_port))	# Bind to address of this computer
@@ -149,60 +157,83 @@ def ConnentWiFi():
 	return 1
 
 
-def Init3DScene(board_file_name):
+def init_3D_scene(board_file_name):
 	data_root = os.path.join(os.path.dirname(__file__), 'data')
 	importer = vtk.vtkGLTFImporter()
-	importer.SetFileName( data_root + board_file_name )
+	importer.SetFileName(data_root + board_file_name)
 	importer.Read()
-	
-	global vtkRenderWindow
-	vtkRenderer = importer.GetRenderer()
-	vtkRenderWindow = importer.GetRenderWindow()
-	vtkRenderWindowInteractor = vtk.vtkRenderWindowInteractor()
-	vtkRenderWindowInteractor.SetRenderWindow(vtkRenderWindow)
 
-	vtkRenderer.GradientBackgroundOn()
-	vtkRenderer.SetBackground(0.2, 0.2, 0.2)
-	vtkRenderer.SetBackground2(0.3, 0.3, 0.3)
-	vtkRenderWindow.SetSize(600, 600)
-	vtkRenderWindow.SetWindowName('TinyCircuits: IMU 3D Visualizer')
+	vtk.vtkButtonWidget()
 
-	vtkRenderWindowInteractor.Initialize()
-	vtkRenderer.GetActiveCamera().Zoom(1.0)
-	vtkRenderer.GetActiveCamera().SetRoll(90)
-	vtkRenderer.GetActiveCamera().SetClippingRange(0.01, 100)
-	vtkRenderer.GetActiveCamera().SetViewAngle(40)
-	vtkRenderer.SetClippingRangeExpansion(0.1)					# Adjust so clipping of ploygons doesn't show
-	vtkRenderer.TwoSidedLightingOn()
-	vtkRenderer.SetAmbient([1, 1, 1])
-	vtkRenderer.ResetCamera()
-	vtkRenderWindow.Render()
+	global vtk_render_window
+	vtk_renderer = importer.GetRenderer()
+	vtk_render_window = importer.GetRenderWindow()
+	vtk_render_window_interactor = vtk.vtkRenderWindowInteractor()
+	vtk_render_window_interactor.SetRenderWindow(vtk_render_window)
+
+	vtk_zero_button = vtk.vtkButtonWidget()
+	vtk_zero_button_representation = vtk.vtkTexturedButtonRepresentation2D()
+
+	vtk_zero_button_representation.SetNumberOfStates(1)
+	vtk_png_reader = vtk.vtkPNGReader()
+	vtk_png_reader.SetFileName("zero.png")
+	vtk_png_reader.Update()
+	image = vtk_png_reader.GetOutput()
+	vtk_zero_button_representation.SetButtonTexture(0, image)
+	vtk_zero_button.SetRepresentation(vtk_zero_button_representation)
+	vtk_zero_button.SetInteractor(vtk_render_window_interactor)
+	vtk_zero_button.SetCurrentRenderer(vtk_renderer)
+	vtk_zero_button.AddObserver("StateChangedEvent", zero_orientation)
+	vtk_zero_button.On()
+
+	width, height, _ = image.GetDimensions()
+	bounds = (0, 0 + width, 0, height, 0, 0)
+	vtk_zero_button_representation.SetPlaceFactor(1)
+	vtk_zero_button_representation.PlaceWidget(bounds)
+
+	vtk_renderer.GradientBackgroundOn()
+	vtk_renderer.SetBackground(0.2, 0.2, 0.2)
+	vtk_renderer.SetBackground2(0.3, 0.3, 0.3)
+	vtk_render_window.SetSize(600, 600)
+	vtk_render_window.SetWindowName('TinyCircuits: IMU 3D Visualizer')
+
+	vtk_render_window_interactor.Initialize()
+	vtk_renderer.GetActiveCamera().Zoom(1.0)
+	vtk_renderer.GetActiveCamera().SetRoll(90)
+	vtk_renderer.GetActiveCamera().SetClippingRange(0.01, 100)
+	vtk_renderer.GetActiveCamera().SetViewAngle(40)
+	vtk_renderer.SetClippingRangeExpansion(0.1)					# Adjust so clipping of ploygons doesn't show
+	vtk_renderer.TwoSidedLightingOn()
+	vtk_renderer.SetAmbient([1, 1, 1])
+	vtk_renderer.ResetCamera()
+	vtk_render_window.Render()
 
 	# Add callback for getting data from Arduino
-	vtkRenderWindowInteractor.CreateRepeatingTimer(1)
-	vtkRenderWindowInteractor.AddObserver("TimerEvent", information_callback)
+	vtk_render_window_interactor.CreateRepeatingTimer(1)
+	vtk_render_window_interactor.AddObserver("TimerEvent", information_callback)
 
-	global vtkActors
-	vtkActors = vtkRenderer.GetActors()
-	vtkRenderWindowInteractor.Start()
+	global vtk_actors
+	vtk_actors = vtk_renderer.GetActors()
+	vtk_render_window_interactor.Start()
 
 
 def main():
 	if COMMUNICATION == USB:
 		print("\n*Looking for USB connection...\n")
-		ConnectUSB()
+		connect_usb()
 	elif COMMUNICATION == WIFI:
 		print("\n*Looking for WiFi connection...\n")
-		ConnentWiFi()
+		connect_wifi()
 
+	# Let wifi connect if it was used
 	sleep(0.25)
 
-	board_id = GetOrientationData()[0]
-	print(board_id)
+	# Every string sent is appended with the board id that is sending the string
+	board_id = get_orientation_data()[0]
 	if board_id == "1":
-		Init3DScene("/TinyZero.glb")
+		init_3D_scene("/TinyZero.glb")
 	elif board_id == "2":
-		Init3DScene("/RobotZero.glb")
+		init_3D_scene("/RobotZero.glb")
 
 
 if __name__ == '__main__':
