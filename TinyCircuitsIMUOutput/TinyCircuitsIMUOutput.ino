@@ -4,6 +4,7 @@
 #include "aci_setup.h"      // 9-axis LSM9DS1
 #include "BMA250.h"         // for interfacing with the 3-axis accel. sensor
 #include <Wire.h>           // for I2C communication with sensors
+#include <Wireling.h>       // For Wireling Interfacing
 #include <WiFi101.h>        // this library is for the wifi connection
 
 
@@ -23,18 +24,20 @@
 
 #define TINYZERO 1
 #define ROBOTZERO 2
+#define WIRELING9AXIS 3
+#define WIRELING3AXIS 4
 
 
 /****** EDIT THIS SECTION TO MATCH THE CONNECTION TO THE COMPUTER AND THE IMU DEVICE YOU ARE USING******/
 int COMMUNICATION = USB;    // options: USB, WIFI
-int BOARD = ROBOTZERO;      // options: TINYZERO, ROBOTZERO
+int BOARD = WIRELING3AXIS;  // options: TINYZERO, ROBOTZERO, WIRELING9AXIS, WIRELING3AXIS
 
 
-/****** EDIT THIS SECTION TO MATCH YOUR WiFi INFO IF USING ******/
+/****** EDIT THIS SECTION TO MATCH YOUR WiFi INFO IF USING WIFI ******/
 char ssid[] = "TestWiFi";                     // your network SSID (name) that you see in network broswers
 char wifi_password[] = "securepassword";      // your network password used to connect to the above SSID
 char server_computer_ip[] = "192.168.0.118";  // local IP address of computer runnning Python script
-uint16_t server_listen_port = 8090;           // port that client and python serveruse
+uint16_t server_listen_port = 8090;           // port that client and python server use
 WiFiClient client;                            // WiFi client to describe this arduino
 
 
@@ -56,11 +59,9 @@ float q[4] = {1.0f, 0.0f, 0.0f, 0.0f};                // vector to hold rotation
 int aX = -1, aY = -1, aZ = -1, gX = -1, gY = -1, gZ = -1, mX = -1, mY = -1, mZ = -1, tempF = -1;
 float roll, pitch, yaw, rollF, pitchF, yawF;
 
-
 // Used to handle BMA250, accelerometer readings
 // are stored internally, unlike LSM9DS1 above
 BMA250 three_axis;
-
 
 
 void setup(void) {
@@ -80,7 +81,7 @@ void setup(void) {
   // call functions for using either the
   // 3-axis BMA250 or 9-axis LSM9DS1 devices
   // depending on BOARD flag
-  SetupSensorhardware();
+  SetupSensorHardware();
 }
 
 
@@ -171,18 +172,37 @@ void CheckCommunicationConnection(){
 // the on-board IMU devices depending
 // on the set device flags set at the
 // top of this file
-void SetupSensorhardware(){
+void SetupSensorHardware(){
   Wire.begin();
   switch(BOARD){
-    case TINYZERO:   // 3-axis
+    case TINYZERO:        // 3-axis
       three_axis.begin(BMA250_range_2g, BMA250_update_time_32ms); 
     break;
-    case ROBOTZERO:  // 9-axis
+    case ROBOTZERO:       // 9-axis
       IMUInit();
       delay(100);
 
       // fill the bias vectors
       CalculateSensorBiases(); 
+    case WIRELING9AXIS:  // 9-axis
+      // Initialize Wireling
+      Wireling.begin();
+      Wireling.selectPort(0); //9-Axis Sensor Port, may differ for you
+      delay(100);
+      IMUInit();
+      delay(100);
+      
+      // fill the bias vectors
+      CalculateSensorBiases();
+    case WIRELING3AXIS: // 3 axis
+      // Initialize Wireling
+      Wireling.begin();
+      Wireling.selectPort(0); //9-Axis Sensor Port, may differ for you
+      delay(100);
+      IMUInit();
+      delay(100);
+    
+      three_axis.begin(BMA250_range_2g, BMA250_update_time_32ms); 
     break;
   }
   delay(100);
@@ -289,7 +309,7 @@ String ReadBMA250(){
   // data that is sent to python is String.
   // Send board every time so can be swapped
   // without script restart
-  return String(BOARD) + " " + String(rollF) + " " + String (pitchF);
+  return String(BOARD) + " " + String(-rollF) + " " + String (-pitchF);
 }
 
 
@@ -352,11 +372,16 @@ String ReadLSM9DS1(){
 // handle sending data over USB to python
 void HandleUSB(){
   switch(BOARD){
-    case TINYZERO:   // 3-axis IMU
+    case TINYZERO:        // 3-axis IMU
       SerialMonitorInterface.println(ReadBMA250());
     break;
-    case ROBOTZERO:   // 9-axis IMU
+    case ROBOTZERO:       // 9-axis IMU
       SerialMonitorInterface.println(ReadLSM9DS1());
+    break;
+    case WIRELING9AXIS:   // 9-axis IMU
+      SerialMonitorInterface.println(ReadLSM9DS1());
+    case WIRELING3AXIS:   // 3-axis IMU
+      SerialMonitorInterface.println(ReadBMA250());
     break;
   }
 }
@@ -365,11 +390,17 @@ void HandleUSB(){
 // handle sending data over WIFI to python
 void HandleWIFI(){
   switch(BOARD){
-    case TINYZERO:   // 3-axis IMU
+    case TINYZERO:        // 3-axis IMU
       client.println(ReadBMA250());
     break;
-    case ROBOTZERO:   // 9-axis IMU
+    case ROBOTZERO:       // 9-axis IMU
       client.println(ReadLSM9DS1());
+    break;
+    case WIRELING9AXIS:   // 9-axis IMU
+      client.println(ReadLSM9DS1());
+    break;
+    case WIRELING3AXIS:   // 3-axis IMU
+      SerialMonitorInterface.println(ReadBMA250());
     break;
   }  
 }

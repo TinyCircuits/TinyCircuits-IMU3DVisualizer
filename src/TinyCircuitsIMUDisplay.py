@@ -59,14 +59,14 @@ def information_callback(self, obj):
 	
 	if len(rotate_data) == 3:
 		vtk_actors.InitTraversal()
-		vtc_next_actor = vtk_actors.GetNextActor()
-		while vtc_next_actor != None:
-			vtc_next_actor.SetOrientation(-90, 90, 0)
-			vtc_next_actor.RotateX(float(rotate_data[1]))
-			vtc_next_actor.RotateY(float(rotate_data[2]))
-			vtc_next_actor.SetScale(0.6, 0.6, 0.6)
-			vtc_next_actor.GetProperty().LightingOff()
-			vtc_next_actor = vtk_actors.GetNextActor()
+		vtk_next_actor = vtk_actors.GetNextActor()
+		while vtk_next_actor != None:
+			vtk_next_actor.SetOrientation(-90, 90, 0)
+			vtk_next_actor.RotateX(float(rotate_data[1]))
+			vtk_next_actor.RotateY(float(rotate_data[2]))
+			vtk_next_actor.SetScale(0.6, 0.6, 0.6)
+			vtk_next_actor.GetProperty().LightingOff()
+			vtk_next_actor = vtk_actors.GetNextActor()
 		vtk_render_window.Render()
 
 	# ensure four elements for four quaterion components
@@ -99,12 +99,12 @@ def information_callback(self, obj):
 		temp_matrix.SetElement(2, 3, 0)
 
 		vtk_actors.InitTraversal()
-		vtc_next_actor = vtk_actors.GetNextActor()
-		while vtc_next_actor != None:
-			vtc_next_actor.SetUserMatrix(temp_matrix)
-			vtc_next_actor.SetScale(0.6, 0.6, 0.6)
-			vtc_next_actor.GetProperty().LightingOff()
-			vtc_next_actor = vtk_actors.GetNextActor()
+		vtk_next_actor = vtk_actors.GetNextActor()
+		while vtk_next_actor != None:
+			vtk_next_actor.SetUserMatrix(temp_matrix)
+			vtk_next_actor.SetScale(0.6, 0.6, 0.6)
+			vtk_next_actor.GetProperty().LightingOff()
+			vtk_next_actor = vtk_actors.GetNextActor()
 		vtk_render_window.Render()
 
 
@@ -234,6 +234,10 @@ def main():
 		init_3D_scene("/TinyZero.glb")
 	elif board_id == "2":
 		init_3D_scene("/RobotZero.glb")
+	elif board_id == "3":
+		init_3D_scene("/Wireling9Axis.glb")
+	elif board_id == "4":
+		init_3D_scene("/Wireling3Axis.glb")
 
 
 if __name__ == '__main__':
