@@ -20,7 +20,7 @@
 
 /****** EDIT THIS SECTION TO MATCH THE CONNECTION TO THE COMPUTER AND THE IMU DEVICE YOU ARE USING******/
 int COMMUNICATION = USB;    // options: USB, WIFI
-int BOARD = ROBOTZERO;  // options: TINYZERO, ROBOTZERO, WIRELING9AXIS, WIRELING3AXIS
+int BOARD = TINYZERO;      // options: TINYZERO, ROBOTZERO, WIRELING9AXIS, WIRELING3AXIS
 
 /****** EDIT THIS SECTION TO MATCH YOUR WiFi INFO IF USING WIFI ******/
 char ssid[] = "TestWiFi";                     // your network SSID (name) that you see in network broswers
@@ -35,11 +35,13 @@ WiFiClient client;                            // WiFi client to describe this ar
 RTIMU *imu;                         // the IMU object
 RTFusionRTQF fusion;                // the fusion object
 RTIMUSettings settings;             // the settings object
-int DISPLAY_INTERVAL = 25;          // interval between pose displays
+int DISPLAY_INTERVAL = 30;          // interval between pose displays
 unsigned long lastDisplay;          // interval tracker between pose displays
 
 // Used to handle BMA250
 BMA250 three_axis;
+float rollF;
+float pitchF;
 
 
 #ifndef ARDUINO_ARCH_SAMD
@@ -204,7 +206,10 @@ String ReadLSM9DS1(){
     fusion.newIMUData(imu->getGyro(), imu->getAccel(), imu->getCompass(), imu->getTimestamp());
     if ((now - lastDisplay) >= DISPLAY_INTERVAL) {
       lastDisplay = now;
-      return String(BOARD) + " " + String(fusion.getFusionQPose().data(0)) + " " + String(fusion.getFusionQPose().data(1)) + " " + String(fusion.getFusionQPose().data(2)) + " " + String(fusion.getFusionQPose().data(3));
+
+      RTQuaternion sample = fusion.getFusionQPose();
+      
+      return String(BOARD) + " " + String(sample.data(0)) + " " + String(sample.data(1)) + " " + String(sample.data(2)) + " " + String(sample.data(3));
     }
   }
   return "";
@@ -230,8 +235,8 @@ String ReadBMA250(){
   float pitch = atan(-1 * aX / sqrt(pow(aY, 2) + pow(aZ, 2))) * 180 / PI;
 
   // low pass filter the results to stop jitter
-  float rollF = 0.9 * rollF + 0.1 * roll;
-  float pitchF = 0.9 * pitchF + 0.1 * pitch;
+  rollF = 0.9 * rollF + 0.1 * roll;
+  pitchF = 0.9 * pitchF + 0.1 * pitch;
 
   // Set to XX as per BMA250_update_time_XXms
   // in the setup, otherwise there is no output
@@ -242,7 +247,7 @@ String ReadBMA250(){
   // data that is sent to python is String.
   // Send board every time so can be swapped
   // without script restart
-  return String(BOARD) + " " + String(-rollF) + " " + String (-pitchF);
+  return String(BOARD) + " " + String(rollF) + " " + String (pitchF);
 }
 
 
