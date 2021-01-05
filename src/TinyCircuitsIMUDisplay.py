@@ -56,7 +56,7 @@ def zero_orientation(self, obj):
 
 def information_callback(self, obj):
 	rotate_data = get_orientation_data()
-	
+
 	if len(rotate_data) == 3:
 		vtk_actors.InitTraversal()
 		vtk_next_actor = vtk_actors.GetNextActor()
@@ -202,7 +202,7 @@ def init_3D_scene(board_file_name):
 	vtk_renderer.GetActiveCamera().SetRoll(90)
 	vtk_renderer.GetActiveCamera().SetClippingRange(0.01, 100)
 	vtk_renderer.GetActiveCamera().SetViewAngle(40)
-	vtk_renderer.SetClippingRangeExpansion(0.1)					# Adjust so clipping of ploygons doesn't show
+	vtk_renderer.SetClippingRangeExpansion(0.1)					# Adjust so clipping of polygons doesn't show
 	vtk_renderer.TwoSidedLightingOn()
 	vtk_renderer.SetAmbient([1, 1, 1])
 	vtk_renderer.ResetCamera()
