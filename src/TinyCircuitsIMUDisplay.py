@@ -1,4 +1,3 @@
-
 #################################
 #	Imports and module names	#
 #################################
@@ -13,7 +12,7 @@ sys.path.append('..')
 import vtk
 
 # import pyserial tools to list ports
-# and find where the arduino is connected
+# and find where the Arduino is connected
 import serial
 import serial.tools.list_ports
 from time import sleep
@@ -41,6 +40,9 @@ client_addr = 0;
 vtk_render_window = 0
 vtk_actors = 0
 
+board_id = -1
+
+
 
 def get_orientation_data():
 	if COMMUNICATION == USB:
@@ -50,20 +52,18 @@ def get_orientation_data():
 		return client.recv(26).decode().split()
 
 
-def zero_orientation(self, obj):
-	print("Zeroed board orientation!")
-
 
 def information_callback(self, obj):
 	rotate_data = get_orientation_data()
 
 	if len(rotate_data) == 3:
+		euler_sample = [float(rotate_data[1]), float(rotate_data[2])]
 		vtk_actors.InitTraversal()
 		vtk_next_actor = vtk_actors.GetNextActor()
 		while vtk_next_actor != None:
 			vtk_next_actor.SetOrientation(-90, 90, 0)
-			vtk_next_actor.RotateX(float(rotate_data[1]))
-			vtk_next_actor.RotateY(float(rotate_data[2]))
+			vtk_next_actor.RotateX(euler_sample[0])
+			vtk_next_actor.RotateY(euler_sample[0])
 			vtk_next_actor.SetScale(0.6, 0.6, 0.6)
 			vtk_next_actor.GetProperty().LightingOff()
 			vtk_next_actor = vtk_actors.GetNextActor()
@@ -73,6 +73,7 @@ def information_callback(self, obj):
 	elif len(rotate_data) == 5:
 		global last_quat
 		last_quat = vtk.vtkQuaternionf(float(rotate_data[1]), float(rotate_data[2]), float(rotate_data[3]), float(rotate_data[4]))
+
 		t = [ [0]*3 for i in range(3)]
 		last_quat.ToMatrix3x3(t)
 		temp_matrix = vtk.vtkMatrix4x4()
@@ -171,26 +172,6 @@ def init_3D_scene(board_file_name):
 	vtk_render_window_interactor = vtk.vtkRenderWindowInteractor()
 	vtk_render_window_interactor.SetRenderWindow(vtk_render_window)
 
-	vtk_zero_button = vtk.vtkButtonWidget()
-	vtk_zero_button_representation = vtk.vtkTexturedButtonRepresentation2D()
-
-	vtk_zero_button_representation.SetNumberOfStates(1)
-	vtk_png_reader = vtk.vtkPNGReader()
-	vtk_png_reader.SetFileName("zero.png")
-	vtk_png_reader.Update()
-	image = vtk_png_reader.GetOutput()
-	vtk_zero_button_representation.SetButtonTexture(0, image)
-	vtk_zero_button.SetRepresentation(vtk_zero_button_representation)
-	vtk_zero_button.SetInteractor(vtk_render_window_interactor)
-	vtk_zero_button.SetCurrentRenderer(vtk_renderer)
-	vtk_zero_button.AddObserver("StateChangedEvent", zero_orientation)
-	vtk_zero_button.On()
-
-	width, height, _ = image.GetDimensions()
-	bounds = (0, 0 + width, 0, height, 0, 0)
-	vtk_zero_button_representation.SetPlaceFactor(1)
-	vtk_zero_button_representation.PlaceWidget(bounds)
-
 	vtk_renderer.GradientBackgroundOn()
 	vtk_renderer.SetBackground(0.2, 0.2, 0.2)
 	vtk_renderer.SetBackground2(0.3, 0.3, 0.3)
@@ -226,9 +207,10 @@ def main():
 		connect_wifi()
 
 	# Let wifi connect if it was used
-	sleep(0.25)
+	sleep(0.1)
 
 	# Every string sent is appended with the board id that is sending the string
+	global board_id
 	board_id = get_orientation_data()[0]
 	if board_id == "1":
 		init_3D_scene("/TinyZero.glb")

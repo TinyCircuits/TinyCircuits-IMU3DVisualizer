@@ -20,12 +20,12 @@
 
 /****** EDIT THIS SECTION TO MATCH THE CONNECTION TO THE COMPUTER AND THE IMU DEVICE YOU ARE USING******/
 int COMMUNICATION = USB;    // options: USB, WIFI
-int BOARD = TINYZERO;      // options: TINYZERO, ROBOTZERO, WIRELING9AXIS, WIRELING3AXIS
+int BOARD = ROBOTZERO;      // options: TINYZERO, ROBOTZERO, WIRELING9AXIS, WIRELING3AXIS
 
 /****** EDIT THIS SECTION TO MATCH YOUR WiFi INFO IF USING WIFI ******/
-char ssid[] = "TestWiFi";                     // your network SSID (name) that you see in network broswers
-char wifi_password[] = "securepassword";      // your network password used to connect to the above SSID
-char server_computer_ip[] = "192.168.0.118";  // local IP address of computer runnning Python script
+char ssid[] = "TinyCircuits";                     // your network SSID (name) that you see in network broswers
+char wifi_password[] = "3336119997";      // your network password used to connect to the above SSID
+char server_computer_ip[] = "192.168.1.107";  // local IP address of computer runnning Python script
 uint16_t server_listen_port = 8090;           // port that client and python server use
 WiFiClient client;                            // WiFi client to describe this arduino
 
